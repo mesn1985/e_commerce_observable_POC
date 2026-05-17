@@ -69,8 +69,14 @@ Wait approximately 30–60 seconds for Elasticsearch and MongoDB to finish initi
 
 ### 2. Verify all services are healthy
 
+**Bash script (Linux/macOS/WSL):**
 ```bash
 ./scripts/health_check.sh
+```
+
+**PowerShell script (Windows):**
+```powershell
+.\scripts\health_check.ps1
 ```
 
 Expected output:
