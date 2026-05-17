@@ -4,6 +4,23 @@ A proof-of-concept e-commerce system built for **IT security students** to learn
 
 > **Learning goal:** Send one HTTP request, copy the `Correlation-ID` from the response, open Kibana, search for that ID, and reconstruct the complete path of the request through Nginx, five FastAPI services, and MongoDB.
 
+This project demonstrates how to trace one business transaction across multiple services **without** OpenTelemetry or span collectors. Instead, it uses a practical log-based approach: each service emits structured JSON logs with the same correlation ID, Filebeat ships those logs to Elasticsearch, and Kibana is used to rebuild the end-to-end flow.
+
+It can be used for:
+- Teaching distributed tracing fundamentals in security and platform courses
+- Practicing incident investigation and request-path reconstruction from logs
+- Demonstrating safe structured logging patterns (what to log, what to avoid)
+- Exploring service-to-service observability in a small microservice environment
+- Testing and troubleshooting Filebeat + Elasticsearch log ingestion pipelines
+
+If you are returning to this repository later, start with these docs:
+- [docs/architecture.md](docs/architecture.md) - Detailed architecture, flow, and shared module responsibilities
+- [docs/kibana-search-guide.md](docs/kibana-search-guide.md) - Step-by-step Kibana workflow to reconstruct a trace
+- [docs/security-notes.md](docs/security-notes.md) - Security rationale, logging boundaries, and production caveats
+- [docs/troubleshooting.md](docs/troubleshooting.md) - Docker and Elasticsearch troubleshooting commands used in practice
+- [docs/implementation.md](docs/implementation.md) - Internal implementation details for middleware, logging, and Filebeat config
+- [tests/README.md](tests/README.md) - Test strategy, smoke suite behavior, and exact test commands
+
 ---
 
 ## Architecture
@@ -47,6 +64,18 @@ graph TD
 | `filebeat` | Ships Docker container logs to Elasticsearch | — |
 
 > **Security note:** Exposing every backend service directly through Nginx is intentional for teaching and debugging purposes. This is **not** a recommended production security design. In production you would expose only the routes required by external clients.
+
+## Known Limitations (POC Scope)
+
+This repository is intentionally optimized for learning and observability, not production hardening.
+
+- No authentication or authorization
+- No TLS/HTTPS termination
+- No rate limiting or abuse protection
+- No production-grade secrets management
+- Backend routes are exposed for teaching and debugging visibility
+
+For the full security rationale and production caveats, see [docs/security-notes.md](docs/security-notes.md).
 
 ---
 
@@ -300,6 +329,24 @@ The tests are integration tests — they require the full stack to be running.
 pip install pytest httpx
 pytest tests/ -v
 ```
+
+Smoke test suite (self-managed environment):
+
+```bash
+pip install pytest httpx testcontainers
+pytest tests/smoke -v
+```
+
+The smoke suite will:
+- Start the full stack via Testcontainers using `docker-compose.yml`
+- Execute one checkout request
+- Validate docker logs and Filebeat health signals
+- Query Elasticsearch directly for the trace
+- Validate expected fields for key events
+
+Set `SMOKE_KEEP_ENV=1` if you want to keep containers running after the smoke tests complete.
+
+See [tests/README.md](tests/README.md) for the full test guide and coverage details.
 
 ---
 
