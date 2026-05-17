@@ -179,6 +179,8 @@ sequenceDiagram
   Nginx-->>Client: Response with Correlation-ID
 ```
 
+> **Note on Nginx Log Timing:** Nginx emits its access log when the response is _completed_ (not when the request arrives). When you search Kibana by correlation ID and sort by timestamp, the Nginx access log may appear _after_ the first application log from cart-service. This is expected behavior—the log entries should be chronologically ordered by their actual timestamps, which means backend services log their `request_received` events before Nginx finishes and logs the access event.
+
 In practical terms:
 - Nginx is the entry point. It preserves an incoming `Correlation-ID` or generates one if the client did not send one.
 - Nginx forwards that value upstream as a request header.
@@ -196,12 +198,74 @@ This means that all log lines for a single request share the same `correlation_i
 
 ---
 
+## Event Names Reference
+
+Every log entry includes an `event_name` field that describes what is happening. This makes it easy to search and filter logs by activity type in Kibana. Here's a complete reference:
+
+### Universal Events (All Services)
+- **`request_received`** – Service received an HTTP request from upstream
+- **`request_completed`** – Service finished processing and sent response upstream
+
+### Checkout Orchestration (cart-service)
+- **`checkout_started`** – User initiated checkout
+- **`product_lookup_started`** – Querying product-service for item details
+- **`product_lookup_completed`** – Product details retrieved
+- **`inventory_reservation_started`** – Requesting inventory reservation from inventory-service
+- **`inventory_reservation_completed`** – Inventory reservation response received
+- **`payment_authorization_started`** – Requesting payment authorization from payment-service
+- **`payment_authorization_completed`** – Payment response received
+- **`order_creation_started`** – Requesting order creation from order-service
+- **`checkout_completed`** – Entire checkout flow finished successfully
+
+### HTTP Communication (shared library)
+- **`outbound_http_request`** – Service is about to make an HTTP call to another service
+- **`outbound_http_response`** – Received response from outbound HTTP call
+- **`retry_attempt`** – Retrying a failed HTTP request (part of retry logic)
+
+### Database Operations
+- **`database_query`** – Executing a database read operation
+- **`database_write`** – Executing a database write operation
+
+### Service-Specific Events
+**Inventory Service:**
+- **`inventory_reservation_started`** – Beginning to reserve inventory units
+- **`inventory_reservation_completed`** – Inventory reservation finished
+
+**Payment Service:**
+- **`payment_authorization_started`** – Beginning payment authorization
+- **`payment_authorization_completed`** – Payment authorization finished (includes `status_text: approved/declined`)
+
+**Order Service:**
+- **`order_creation_started`** – Beginning to create order record
+- **`order_creation_completed`** – Order creation finished
+
+### Searching by Event in Kibana
+
+To find all logs of a specific event type, use:
+```
+event_name : "checkout_started"
+```
+
+To find all events for a checkout that also had a specific event:
+```
+correlation_id : "your-id" AND event_name : "payment_authorization_completed"
+```
+
+To find all failed payment attempts:
+```
+event_name : "payment_authorization_completed" AND status_text : "declined"
+```
+
+---
+
 ## Why Structured JSON Logs?
 
 All services log JSON objects to stdout/stderr. Docker captures these and Filebeat ships them to Elasticsearch.
 
+Filebeat reads Docker JSON log files with the supported `filestream` input plus the Docker `container` parser. This avoids the deprecated legacy log input and keeps the stack aligned with current Filebeat guidance.
+
 Benefits:
-- Every field is individually searchable in Kibana (e.g., `event`, `status_code`, `duration_ms`)
+- Every field is individually searchable in Kibana (e.g., `event_name`, `status_code`, `duration_ms`)
 - No fragile log parsing is needed
 - Adding `correlation_id` as a field makes cross-service correlation trivial
 

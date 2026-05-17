@@ -95,17 +95,17 @@ correlation_id : "your-id-here"
 
 Find only logs from cart-service:
 ```
-correlation_id : "your-id" AND service : "cart-service"
+correlation_id : "your-id" AND service_name : "cart-service"
 ```
 
 Find only database operations:
 ```
-correlation_id : "your-id" AND event : "database_write"
+correlation_id : "your-id" AND event_name : "database_write"
 ```
 
 Find only outbound HTTP calls:
 ```
-correlation_id : "your-id" AND event : "outbound_http_request"
+correlation_id : "your-id" AND event_name : "outbound_http_request"
 ```
 
 ---
@@ -113,8 +113,8 @@ correlation_id : "your-id" AND event : "outbound_http_request"
 ## Tip — Add Columns
 
 In Discover, click **Add column** and add these fields for a cleaner view:
-- `service`
-- `event`
+- `service_name`
+- `event_name`
 - `status_code`
 - `duration_ms`
 - `target_service`

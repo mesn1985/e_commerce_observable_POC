@@ -29,14 +29,24 @@ class JSONFormatter(logging.Formatter):
         entry = {
             "timestamp": ts,
             "level": record.levelname,
-            "service": self.service_name,
-            "event": getattr(record, "event", record.getMessage()),
+            "service_name": self.service_name,
+            "event_name": getattr(record, "event", record.getMessage()),
             "correlation_id": getattr(record, "correlation_id", ""),
         }
         # Merge any extra fields supplied via extra={...}
         for key, value in record.__dict__.items():
-            if key not in _SKIP_ATTRS and not key.startswith("_") and key not in entry:
-                entry[key] = value
+            if key in _SKIP_ATTRS or key.startswith("_"):
+                continue
+
+            mapped_key = {
+                "event": "event_name",
+                "service": "service_name",
+                "error": "error_message",
+                "status": "status_text",
+            }.get(key, key)
+
+            if mapped_key not in entry:
+                entry[mapped_key] = value
 
         if record.exc_info:
             entry["exc_info"] = self.formatException(record.exc_info)

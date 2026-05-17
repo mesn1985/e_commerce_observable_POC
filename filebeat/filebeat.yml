@@ -1,17 +1,37 @@
 filebeat.inputs:
-  - type: container
+  - type: filestream
+    id: docker-containers
     paths:
       - /var/lib/docker/containers/*/*.log
-    stream: all
+    parsers:
+      - container:
+          stream: all
+          format: docker
 
 processors:
   - add_docker_metadata:
       host: "unix:///var/run/docker.sock"
+  - drop_event:
+      when:
+        equals:
+          container.name: "e_commerce_distributed_tracing_poc-filebeat-1"
   - decode_json_fields:
       fields: ["message"]
       target: ""
       overwrite_keys: true
       add_error_key: false
+  - drop_fields:
+      ignore_missing: true
+      fields:
+        - message
+        - host
+        - input
+        - stream
+        - timestamp
+        - log
+        - container.id
+        - container.image
+        - container.labels
 
 output.elasticsearch:
   hosts: ["elasticsearch:9200"]
