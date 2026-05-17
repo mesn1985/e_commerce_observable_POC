@@ -358,7 +358,7 @@ See [tests/README.md](tests/README.md) for the full test guide and coverage deta
 | `curl` returns 502 | A FastAPI service is still starting | Wait a few seconds and retry |
 | MongoDB seed data missing | Init scripts did not run on first start | Run `docker compose down -v` then `docker compose up --build` |
 | Elasticsearch container exits | Not enough memory | Increase Docker Desktop memory to at least 4 GB |
-| Permission error on `health_check.sh` | Script not executable | Run `chmod +x scripts/*.sh` |
+<!-- | Permission error on `health_check.sh` | Script not executable | Run `chmod +x scripts/*.sh` | -->
 
 ---
 
