@@ -99,10 +99,10 @@ Wait approximately 30–60 seconds for Elasticsearch and MongoDB to finish initi
 
 ### 2. Verify all services are healthy
 
-**Bash script (Linux/macOS/WSL):**
+<!-- **Bash script (Linux/macOS/WSL):**
 ```bash
 ./scripts/health_check.sh
-```
+``` -->
 
 **PowerShell script (Windows):**
 ```powershell
@@ -121,10 +121,10 @@ All services are healthy.
 
 ### 3. Send the demo checkout request
 
-**Bash script (Linux/macOS/WSL):**
+<!-- **Bash script (Linux/macOS/WSL):**
 ```bash
 ./scripts/demo_checkout.sh
-```
+``` -->
 
 **PowerShell script (Windows):**
 ```powershell
@@ -138,11 +138,11 @@ All services are healthy.
 - The collection stores the response Correlation-ID in `lastCorrelationId` for reuse.
 - Run `Checkout Flow / Search Trace in Elasticsearch` to fetch matching log entries directly from `{{elasticsearchUrl}} = http://localhost:9200`.
 
-**Python script (cross-platform):**
+<!-- **Python script (cross-platform):**
 ```bash
 pip install httpx
 python scripts/demo_checkout.py
-```
+``` -->
 
 **Raw curl (Bash):**
 ```bash
