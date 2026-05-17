@@ -75,10 +75,13 @@ Smoke tests start the full environment using the repository's `docker-compose.ym
 
 ### Create a Python Virtual Environment
 
-It is recommended to create a Python virtual environment to isolate test dependencies.
+It is recommended to create a Python virtual environment to isolate test dependencies. Run these commands from the **repository root folder** (not from within `tests/`):
 
 **Bash (Linux/macOS/WSL):**
 ```bash
+# Navigate to repository root if not already there
+cd <path to e_commerce_observable_POC>
+
 # Create virtual environment
 python -m venv venv
 
@@ -88,6 +91,9 @@ source venv/bin/activate
 
 **PowerShell (Windows):**
 ```powershell
+# Navigate to repository root if not already there
+cd <path to e_commerce_observable_POC>
+
 # Create virtual environment
 python -m venv venv
 
@@ -99,7 +105,7 @@ python -m venv venv
 
 ### Install Test Dependencies
 
-With the virtual environment activated, install the test dependencies:
+With the virtual environment activated (from the repository root), install the test dependencies:
 
 ```bash
 pip install pytest httpx testcontainers
