@@ -1,0 +1,238 @@
+{
+  "info": {
+    "_postman_id": "3b6d8b62-c447-4f70-95ef-7fd0f5c8418a",
+    "name": "ecommerce-distributed-tracing-poc",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Requests for verifying health and exercising the demo checkout flow through Nginx."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "elasticsearchUrl",
+      "value": "http://localhost:9200"
+    },
+    {
+      "key": "lastCorrelationId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Product Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product-health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "product-health"
+              ]
+            },
+            "description": "Verifies that product-service is reachable through Nginx."
+          },
+          "response": []
+        },
+        {
+          "name": "Cart Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cart-health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart-health"
+              ]
+            },
+            "description": "Verifies that cart-service is reachable through Nginx."
+          },
+          "response": []
+        },
+        {
+          "name": "Inventory Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/inventory-health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inventory-health"
+              ]
+            },
+            "description": "Verifies that inventory-service is reachable through Nginx."
+          },
+          "response": []
+        },
+        {
+          "name": "Payment Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payment-health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payment-health"
+              ]
+            },
+            "description": "Verifies that payment-service is reachable through Nginx."
+          },
+          "response": []
+        },
+        {
+          "name": "Order Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order-health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "order-health"
+              ]
+            },
+            "description": "Verifies that order-service is reachable through Nginx."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Checkout Flow",
+      "item": [
+        {
+          "name": "Demo Checkout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Checkout request succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const rawCorrelationId = pm.response.headers.get('Correlation-ID') || pm.response.headers.get('correlation-id');",
+                  "if (rawCorrelationId) {",
+                  "  const correlationId = rawCorrelationId.split(',')[0].trim();",
+                  "  pm.collectionVariables.set('lastCorrelationId', correlationId);",
+                  "}",
+                  "",
+                  "pm.test('Correlation-ID header is present', function () {",
+                  "  pm.expect(pm.collectionVariables.get('lastCorrelationId')).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"product_id\": \"p1001\", \"quantity\": 2 }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/cart/student-1/checkout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cart",
+                "student-1",
+                "checkout"
+              ]
+            },
+            "description": "Runs the demo checkout flow through Nginx and stores the Correlation-ID in the collection variable lastCorrelationId."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Trace in Elasticsearch",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Correlation ID available for trace search', function () {",
+                  "  pm.expect(pm.collectionVariables.get('lastCorrelationId')).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Trace search succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"size\": 100,\n  \"sort\": [\n    { \"@timestamp\": { \"order\": \"asc\" } }\n  ],\n  \"query\": {\n    \"term\": {\n      \"correlation_id.keyword\": \"{{lastCorrelationId}}\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{elasticsearchUrl}}/filebeat-*/_search",
+              "host": [
+                "{{elasticsearchUrl}}"
+              ],
+              "path": [
+                "filebeat-*",
+                "_search"
+              ]
+            },
+            "description": "Searches Filebeat indices directly in Elasticsearch using the Correlation-ID saved by the demo checkout request."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

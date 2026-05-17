@@ -102,6 +102,13 @@ All services are healthy.
 .\scripts\demo_checkout.ps1
 ```
 
+**Postman collection:**
+- Import [postman/ecommerce-distributed-tracing-poc.postman_collection.json](postman/ecommerce-distributed-tracing-poc.postman_collection.json) into Postman.
+- Use `Health Checks` to test all five services through Nginx.
+- Run `Checkout Flow / Demo Checkout` against `{{baseUrl}} = http://localhost:8080`.
+- The collection stores the response Correlation-ID in `lastCorrelationId` for reuse.
+- Run `Checkout Flow / Search Trace in Elasticsearch` to fetch matching log entries directly from `{{elasticsearchUrl}} = http://localhost:9200`.
+
 **Python script (cross-platform):**
 ```bash
 pip install httpx
@@ -147,7 +154,7 @@ See [docs/kibana-search-guide.md](docs/kibana-search-guide.md) for a detailed wa
 
 ## Correlation IDs Explained
 
-Every request that arrives at Nginx is assigned a **Correlation-ID** — a unique UUID that travels through every service involved in handling that request.
+Every request that arrives at Nginx gets a **Correlation-ID context** that travels through every service involved in handling that request.
 
 ### Conceptual Flow (Nginx -> cart-service -> upstream)
 
@@ -173,14 +180,17 @@ sequenceDiagram
 ```
 
 In practical terms:
-- Nginx is the entry point and establishes the correlation context for the request.
-- `cart-service` keeps that same ID in `request.state`, logs it, and reuses it on outbound calls.
+- Nginx is the entry point. It preserves an incoming `Correlation-ID` or generates one if the client did not send one.
+- Nginx forwards that value upstream as a request header.
+- `cart-service` stores that same ID in `request.state`, logs it, and reuses it on outbound calls.
 - Every downstream service logs the same ID, so one Kibana search reconstructs the whole path.
+- Services also log whether the ID came from an incoming header or was generated, using `correlation_id_source`.
 
 - If the client sends a `Correlation-ID` header, Nginx preserves it.
-- If the client does not send one, Nginx generates a UUID automatically.
+- If the client does not send one, Nginx generates a request identifier automatically.
 - Every service reads the header, adds it to every log entry, and forwards it on every outbound HTTP call.
-- Every service returns the same `Correlation-ID` in the response header and body.
+- The application services return the `Correlation-ID` in the response header and body.
+- Nginx no longer adds a second `Correlation-ID` response header, which avoids duplicated values at the client.
 
 This means that all log lines for a single request share the same `correlation_id` field, making it possible to search Kibana for one ID and see the complete trace.
 
