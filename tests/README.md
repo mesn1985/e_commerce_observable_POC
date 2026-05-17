@@ -73,7 +73,33 @@ Smoke tests start the full environment using the repository's `docker-compose.ym
 
 ## Install Test Dependencies
 
-Install the test dependencies locally:
+### Create a Python Virtual Environment
+
+It is recommended to create a Python virtual environment to isolate test dependencies.
+
+**Bash (Linux/macOS/WSL):**
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+source venv/bin/activate
+```
+
+**PowerShell (Windows):**
+```powershell
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+.\venv\Scripts\Activate.ps1
+```
+
+> **Note:** If you encounter an execution policy error on PowerShell, run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
+### Install Test Dependencies
+
+With the virtual environment activated, install the test dependencies:
 
 ```bash
 pip install pytest httpx testcontainers
@@ -83,6 +109,18 @@ If you only want to run the basic integration tests, `pytest` and `httpx` are su
 
 ```bash
 pip install pytest httpx
+```
+
+### Deactivate Virtual Environment
+
+When you are finished, deactivate the virtual environment:
+
+```bash
+# Bash
+deactivate
+
+# PowerShell
+deactivate
 ```
 
 ---
