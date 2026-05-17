@@ -210,7 +210,7 @@ Every application log entry must include:
 {
   "timestamp": "2026-01-01T12:00:00.000Z",
   "level": "INFO",
-  "service": "cart-service",
+  "service_name": "cart-service",
   "correlation_id": "example-correlation-id",
   "event": "request_received",
   "method": "POST",
@@ -352,7 +352,7 @@ Nginx must log JSON access logs that include:
 ```json
 {
   "timestamp": "2026-01-01T12:00:00+00:00",
-  "service": "nginx",
+  "service_name": "nginx",
   "correlation_id": "example-correlation-id",
   "remote_addr": "172.18.0.1",
   "request_method": "POST",

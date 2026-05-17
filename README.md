@@ -328,3 +328,22 @@ Remove built images:
 ```bash
 docker compose down --rmi all -v
 ```
+
+View volumes associated with this project:
+
+```bash
+docker volume ls | grep e_commerce
+```
+
+Remove specific volumes manually (if needed):
+
+```bash
+docker volume rm e_commerce_distributed_tracing_poc_mongodb_data
+docker volume rm e_commerce_distributed_tracing_poc_elasticsearch_data
+```
+
+Or remove all unused volumes in Docker:
+
+```bash
+docker volume prune
+```
