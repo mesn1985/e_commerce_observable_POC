@@ -62,7 +62,7 @@ async def process_checkout(user_id: str, items: List[dict], correlation_id: str)
                 "event": "product_lookup_completed",
                 "correlation_id": correlation_id,
                 "product_id": product_id,
-                "name": product.get("name"),
+                "product_name": product.get("name"),
                 "price": product.get("price"),
             },
         )

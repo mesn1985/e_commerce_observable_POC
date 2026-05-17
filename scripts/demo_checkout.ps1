@@ -7,6 +7,21 @@ if ($null -eq $env:BASE_URL) {
   $BaseUrl = $env:BASE_URL
 }
 
+function Get-PrimaryCorrelationId {
+  param([object]$RawValue)
+
+  if ($null -eq $RawValue) {
+    return $null
+  }
+
+  $text = [string]$RawValue
+  if ([string]::IsNullOrWhiteSpace($text)) {
+    return $null
+  }
+
+  return ($text.Split(',')[0]).Trim()
+}
+
 Write-Host "Sending checkout request to $BaseUrl/cart/student-1/checkout ..."
 Write-Host ""
 
@@ -29,15 +44,15 @@ try {
   Write-Host ""
 
   # Extract Correlation-ID header
-  $corrId = $response.Headers["Correlation-ID"]
+  $corrId = Get-PrimaryCorrelationId $response.Headers["Correlation-ID"]
 
   if ($corrId) {
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    Write-Host "--------------------------------------------------------"
     Write-Host "  Correlation-ID : $corrId"
     Write-Host ""
     Write-Host "  Open Kibana Discover at http://localhost:5601 and search:"
     Write-Host "    correlation_id : `"$corrId`""
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    Write-Host "--------------------------------------------------------"
   } else {
     Write-Host "WARNING: Correlation-ID header was not found in the response."
   }
@@ -49,7 +64,7 @@ try {
     Write-Host "HTTP/1.1 $statusCode $statusText"
 
     foreach ($headerName in $httpResponse.Headers.AllKeys) {
-      Write-Host "$headerName: $($httpResponse.Headers[$headerName])"
+      Write-Host ("{0}: {1}" -f $headerName, $httpResponse.Headers[$headerName])
     }
 
     Write-Host ""
@@ -61,18 +76,18 @@ try {
     Write-Host $errorBody
     Write-Host ""
 
-    $corrId = $httpResponse.Headers["Correlation-ID"]
+    $corrId = Get-PrimaryCorrelationId $httpResponse.Headers["Correlation-ID"]
     if (-not $corrId) {
-      $corrId = $httpResponse.Headers["correlation-id"]
+      $corrId = Get-PrimaryCorrelationId $httpResponse.Headers["correlation-id"]
     }
 
     if ($corrId) {
-      Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      Write-Host "--------------------------------------------------------"
       Write-Host "  Correlation-ID : $corrId"
       Write-Host ""
       Write-Host "  Open Kibana Discover at http://localhost:5601 and search:"
       Write-Host "    correlation_id : `"$corrId`""
-      Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      Write-Host "--------------------------------------------------------"
     }
   } else {
     Write-Host "ERROR: Failed to send checkout request."

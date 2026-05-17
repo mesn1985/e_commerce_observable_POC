@@ -25,7 +25,9 @@ app = FastAPI(title=SERVICE_NAME, lifespan=lifespan)
 
 @app.middleware("http")
 async def correlation_middleware(request: Request, call_next):
-    correlation_id = request.headers.get(CORRELATION_ID_HEADER) or str(uuid.uuid4())
+    incoming_correlation_id = request.headers.get(CORRELATION_ID_HEADER)
+    correlation_id = incoming_correlation_id or str(uuid.uuid4())
+    correlation_source = "request_header" if incoming_correlation_id else "generated"
     request.state.correlation_id = correlation_id
 
     start = time.monotonic()
@@ -34,6 +36,7 @@ async def correlation_middleware(request: Request, call_next):
         extra={
             "event": "request_received",
             "correlation_id": correlation_id,
+            "correlation_id_source": correlation_source,
             "method": request.method,
             "path": request.url.path,
         },
@@ -42,12 +45,14 @@ async def correlation_middleware(request: Request, call_next):
     response = await call_next(request)
     duration_ms = int((time.monotonic() - start) * 1000)
 
-    response.headers[CORRELATION_ID_HEADER] = correlation_id
+    if CORRELATION_ID_HEADER not in response.headers:
+        response.headers[CORRELATION_ID_HEADER] = correlation_id
     logger.info(
         "request_completed",
         extra={
             "event": "request_completed",
             "correlation_id": correlation_id,
+            "correlation_id_source": correlation_source,
             "method": request.method,
             "path": request.url.path,
             "status_code": response.status_code,

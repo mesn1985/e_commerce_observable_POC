@@ -149,6 +149,34 @@ See [docs/kibana-search-guide.md](docs/kibana-search-guide.md) for a detailed wa
 
 Every request that arrives at Nginx is assigned a **Correlation-ID** — a unique UUID that travels through every service involved in handling that request.
 
+### Conceptual Flow (Nginx -> cart-service -> upstream)
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant Nginx
+  participant Cart as cart-service
+  participant Product as product-service
+
+  Client->>Nginx: POST /cart/student-1/checkout (+ optional Correlation-ID)
+  alt Client sent Correlation-ID
+    Nginx->>Nginx: Reuse incoming Correlation-ID
+  else Client did not send Correlation-ID
+    Nginx->>Nginx: Generate Correlation-ID
+  end
+  Nginx->>Cart: Forward request with Correlation-ID header
+  Cart->>Cart: Read header (or generate if missing)
+  Cart->>Product: Outbound call with same Correlation-ID header
+  Product-->>Cart: Response with same Correlation-ID
+  Cart-->>Nginx: Response with same Correlation-ID
+  Nginx-->>Client: Response with Correlation-ID
+```
+
+In practical terms:
+- Nginx is the entry point and establishes the correlation context for the request.
+- `cart-service` keeps that same ID in `request.state`, logs it, and reuses it on outbound calls.
+- Every downstream service logs the same ID, so one Kibana search reconstructs the whole path.
+
 - If the client sends a `Correlation-ID` header, Nginx preserves it.
 - If the client does not send one, Nginx generates a UUID automatically.
 - Every service reads the header, adds it to every log entry, and forwards it on every outbound HTTP call.
