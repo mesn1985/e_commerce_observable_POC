@@ -1,7 +1,11 @@
 # health_check.ps1 — Verify all five services are up through Nginx.
 # Usage: .\scripts\health_check.ps1
 
-$BaseUrl = $env:BASE_URL -eq $null ? "http://localhost:8080" : $env:BASE_URL
+if ($null -eq $env:BASE_URL) {
+  $BaseUrl = "http://localhost:8080"
+} else {
+  $BaseUrl = $env:BASE_URL
+}
 $Failed = $false
 
 function Check-Service {
@@ -11,7 +15,7 @@ function Check-Service {
   )
 
   try {
-    $response = Invoke-WebRequest -Uri $Url -Method Get -ErrorAction SilentlyContinue
+    $response = Invoke-WebRequest -Uri $Url -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
     $httpCode = $response.StatusCode
     if ($httpCode -eq 200) {
       Write-Host "[OK]   $Name -> HTTP $httpCode"

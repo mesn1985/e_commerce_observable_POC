@@ -54,6 +54,7 @@ graph TD
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose plugin)
 - At least 4 GB of free RAM (Elasticsearch requires ~1 GB)
+- PowerShell 5.1+ (for running `health_check.ps1` on Windows)
 
 ---
 
