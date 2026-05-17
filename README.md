@@ -110,8 +110,12 @@ python scripts/demo_checkout.py
 
 **Raw curl:**
 ```bash
-curl -i -X POST http://localhost:8080/cart/student-1/checkout  -H "Content-Type: application/json" -d '{"items": [{"product_id": "p1001", "quantity": 2}]}'
+curl -i -X POST http://localhost:8080/cart/student-1/checkout \
+  -H "Content-Type: application/json" \
+  -d '{"items": [{"product_id": "p1001", "quantity": 2}]}'
 ```
+
+> **Note:** On Windows PowerShell, `curl` is aliased to `Invoke-WebRequest`. Use `curl.exe` or the PowerShell demo script (`.\scripts\demo_checkout.ps1`) instead.
 
 Copy the `Correlation-ID` value from the response header.
 
