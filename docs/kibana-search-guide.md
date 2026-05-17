@@ -69,12 +69,12 @@ With the logs sorted by time you will see entries from each component:
 
 | Service | What you expect to see |
 |---|---|
-| `nginx` | Access log with `request_method`, `request_uri`, `status`, `request_time` |
 | `cart-service` | `checkout_started`, `product_lookup_started/completed`, `inventory_reservation_started/completed`, `payment_authorization_started/completed`, `order_creation_started/completed`, `checkout_completed` |
 | `product-service` | `request_received`, `database_query`, `request_completed` |
 | `inventory-service` | `request_received`, `inventory_reservation_started`, `database_write`, `inventory_reservation_completed`, `request_completed` |
 | `payment-service` | `request_received`, `payment_authorization_started`, `payment_authorization_completed`, `request_completed` |
 | `order-service` | `request_received`, `order_creation_started`, `database_write`, `order_creation_completed`, `request_completed` |
+| `nginx` | Access log with `request_method`, `request_uri`, `status`, `request_time` |
 
 ### Outbound HTTP call logs (in cart-service)
 
