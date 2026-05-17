@@ -110,9 +110,7 @@ python scripts/demo_checkout.py
 
 **Raw curl:**
 ```bash
-curl -i -X POST http://localhost:8080/cart/student-1/checkout \
-  -H "Content-Type: application/json" \
-  -d '{"items": [{"product_id": "p1001", "quantity": 2}]}'
+curl -i -X POST http://localhost:8080/cart/student-1/checkout  -H "Content-Type: application/json" -d '{"items": [{"product_id": "p1001", "quantity": 2}]}'
 ```
 
 Copy the `Correlation-ID` value from the response header.
