@@ -97,6 +97,11 @@ All services are healthy.
 ./scripts/demo_checkout.sh
 ```
 
+**PowerShell script (Windows):**
+```powershell
+.\scripts\demo_checkout.ps1
+```
+
 **Python script (cross-platform):**
 ```bash
 pip install httpx
