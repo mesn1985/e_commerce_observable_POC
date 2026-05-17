@@ -21,16 +21,17 @@ def smoke_environment() -> Generator[None, None, None]:
     compose_module = require_module("testcontainers.compose")
     DockerCompose = compose_module.DockerCompose
 
-    run_compose(["down", "-v"], timeout=240)
+    # Clean up any previous environment
+    try:
+        run_compose(["down", "-v"], timeout=240)
+    except Exception:
+        pass  # Ignore errors on cleanup if stack doesn't exist
+
     compose = DockerCompose(str(REPO_ROOT), compose_file_name="docker-compose.yml")
     compose.start()
     wait_for_stack_ready(timeout_seconds=300)
 
     yield
-
-    if os.getenv("SMOKE_KEEP_ENV", "0") != "1":
-        compose.stop()
-        run_compose(["down", "-v"], timeout=240)
 
 
 @pytest.fixture(scope="session")

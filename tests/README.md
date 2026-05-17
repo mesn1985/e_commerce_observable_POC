@@ -170,6 +170,8 @@ pytest tests/test_checkout_flow.py -v
 
 ## Running the Smoke Tests
 
+> **Note:** Ensure Docker Desktop or Docker Engine is running before starting the smoke tests. The smoke suite will start the full stack automatically using Docker Compose.
+
 Run the full smoke suite:
 
 ```bash
@@ -214,19 +216,37 @@ This keeps the suite reasonably efficient while still validating the full stack.
 
 ### Keeping the environment running
 
-By default, the smoke suite tears the environment down after the tests complete.
+The smoke suite starts the Docker Compose environment before running tests. By default, you should manually clean up when finished.
 
-To keep the environment running for inspection afterward:
+### Manual cleanup
+
+After running smoke tests, clean up the Docker environment to free disk space and resources:
+
+```bash
+docker compose down -v
+```
+
+This command removes all containers, networks, and volumes created by the smoke tests.
+
+### Keeping the environment running for manual inspection
+
+If you want to keep the environment running after tests complete to inspect logs or query Elasticsearch:
 
 **PowerShell:**
 ```powershell
 $env:SMOKE_KEEP_ENV = "1"
-pytest tests/smoke -v
+.\venv\Scripts\python -m pytest tests/smoke -v
 ```
 
 **Bash:**
 ```bash
 SMOKE_KEEP_ENV=1 pytest tests/smoke -v
+```
+
+Then manually clean up when you're done:
+
+```bash
+docker compose down -v
 ```
 
 ---
