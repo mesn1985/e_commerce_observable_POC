@@ -119,7 +119,7 @@ curl -i -X POST http://localhost:8080/cart/student-1/checkout \
 ```powershell
 curl.exe -i -X POST http://localhost:8080/cart/student-1/checkout `
   -H "Content-Type: application/json" `
-  --data-raw "{\"items\":[{\"product_id\":\"p1001\",\"quantity\":2}]}"
+  --data-raw '{"items":[{"product_id":"p1001","quantity":2}]}'
 ```
 
 > **Note:** In PowerShell, `curl` is an alias for `Invoke-WebRequest`. Use `curl.exe` if you want the actual curl CLI.

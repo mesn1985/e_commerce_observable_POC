@@ -10,16 +10,12 @@ if ($null -eq $env:BASE_URL) {
 Write-Host "Sending checkout request to $BaseUrl/cart/student-1/checkout ..."
 Write-Host ""
 
-$body = @{
-  items = @(
-    @{ product_id = "p1001"; quantity = 2 }
-  )
-} | ConvertTo-Json
+$body = '{"items":[{"product_id":"p1001","quantity":2}]}'
 
 try {
   $response = Invoke-WebRequest -Uri "$BaseUrl/cart/student-1/checkout" `
     -Method Post `
-    -Headers @{"Content-Type" = "application/json"} `
+    -ContentType "application/json" `
     -Body $body `
     -UseBasicParsing
 
@@ -46,7 +42,42 @@ try {
     Write-Host "WARNING: Correlation-ID header was not found in the response."
   }
 } catch {
-  Write-Host "ERROR: Failed to send checkout request."
-  Write-Host $_.Exception.Message
+  $httpResponse = $_.Exception.Response
+  if ($null -ne $httpResponse) {
+    $statusCode = [int]$httpResponse.StatusCode
+    $statusText = $httpResponse.StatusDescription
+    Write-Host "HTTP/1.1 $statusCode $statusText"
+
+    foreach ($headerName in $httpResponse.Headers.AllKeys) {
+      Write-Host "$headerName: $($httpResponse.Headers[$headerName])"
+    }
+
+    Write-Host ""
+
+    $stream = $httpResponse.GetResponseStream()
+    $reader = New-Object System.IO.StreamReader($stream)
+    $errorBody = $reader.ReadToEnd()
+    $reader.Close()
+    Write-Host $errorBody
+    Write-Host ""
+
+    $corrId = $httpResponse.Headers["Correlation-ID"]
+    if (-not $corrId) {
+      $corrId = $httpResponse.Headers["correlation-id"]
+    }
+
+    if ($corrId) {
+      Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      Write-Host "  Correlation-ID : $corrId"
+      Write-Host ""
+      Write-Host "  Open Kibana Discover at http://localhost:5601 and search:"
+      Write-Host "    correlation_id : `"$corrId`""
+      Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    }
+  } else {
+    Write-Host "ERROR: Failed to send checkout request."
+    Write-Host $_.Exception.Message
+  }
+
   exit 1
 }
