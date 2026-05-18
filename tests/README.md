@@ -203,7 +203,7 @@ The smoke suite performs the following flow:
    - Filebeat behavior
    - Elasticsearch trace completeness
    - expected structured fields on indexed events
-8. Tear down the environment when the session finishes
+8. Keep the environment available for post-run inspection unless manually cleaned up
 
 ### Smoke fixture behavior
 
@@ -216,7 +216,7 @@ This keeps the suite reasonably efficient while still validating the full stack.
 
 ### Keeping the environment running
 
-The smoke suite starts the Docker Compose environment before running tests. By default, you should manually clean up when finished.
+The smoke suite starts the Docker Compose environment before running tests. By default, manually clean up when finished.
 
 ### Manual cleanup
 
@@ -230,18 +230,8 @@ This command removes all containers, networks, and volumes created by the smoke 
 
 ### Keeping the environment running for manual inspection
 
-If you want to keep the environment running after tests complete to inspect logs or query Elasticsearch:
-
-**PowerShell:**
-```powershell
-$env:SMOKE_KEEP_ENV = "1"
-.\venv\Scripts\python -m pytest tests/smoke -v
-```
-
-**Bash:**
-```bash
-SMOKE_KEEP_ENV=1 pytest tests/smoke -v
-```
+The environment is already suitable for manual post-run inspection with the current fixture behavior.
+The `SMOKE_KEEP_ENV` variable is not required by the current test code.
 
 Then manually clean up when you're done:
 

@@ -182,7 +182,7 @@ The `call_service()` function in `shared/http_client.py` handles all service-to-
 
 1. **Automatic Correlation-ID forwarding** — Every outbound request includes the header
 2. **Request/response logging** — Logs both sides of the call
-3. **Retry logic** — Up to 3 attempts with exponential backoff
+3. **Retry logic** — Up to 3 attempts (immediate retries in current implementation)
 4. **Duration tracking** — Measures elapsed time per attempt
 
 #### Implementation
@@ -411,7 +411,8 @@ setup.template.pattern: "filebeat-*"
 setup.ilm.enabled: false
 ```
 
-- Creates a data view in Kibana for pattern `filebeat-*`
+- Configures Filebeat to connect to Kibana and use template pattern `filebeat-*`
+- Kibana data view creation is done manually in this project (see Kibana search guide)
 - ILM disabled (not needed for POC)
 
 #### 8. Filebeat's Own Logging

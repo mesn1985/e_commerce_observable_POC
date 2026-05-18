@@ -65,5 +65,5 @@ sequenceDiagram
 | `correlation.py` | `CORRELATION_ID_HEADER` constant, header extraction |
 | `logging_config.py` | `JSONFormatter`, `setup_logging()` factory |
 | `http_client.py` | `call_service()` — forwarded header, outbound logging, retries |
-| `retry.py` | Tenacity retry decorator (3 attempts) |
+| `retry.py` | Reusable Tenacity retry decorator helper (3 attempts) |
 | `responses.py` | `with_correlation_id()` helper |
