@@ -1060,9 +1060,121 @@ correlation_id : "3d9f4c9b5e0c4b1aa0b9e8d8c7f6a5e1"
 
 Include basic tests.
 
+The tests in `tests/` and `tests/smoke/` are part of the implementation contract.
+The project is not considered complete unless these tests pass.
+
+### 18.0 Generic Test Contract (Implementation-Neutral)
+
+In addition to concrete test files, the project must satisfy these generic test cases.
+These define what the system should prove, regardless of test framework or file layout.
+
+#### Test Case A: Health Endpoint Availability
+
+Goal:
+
+* Verify that every service is reachable through Nginx health routes.
+
+What it should test:
+
+* each public health route returns HTTP 200
+* health payload indicates service is healthy (`status: ok`)
+* response contains `Correlation-ID` header
+
+#### Test Case B: Checkout Happy Path
+
+Goal:
+
+* Verify checkout succeeds end-to-end through Nginx.
+
+What it should test:
+
+* checkout endpoint returns HTTP 200
+* response body contains success status and non-empty order identifier
+* response body includes `correlation_id`
+* response header includes `Correlation-ID`
+* body and header correlation IDs are equal
+
+#### Test Case C: Correlation ID Preservation
+
+Goal:
+
+* Verify caller-provided correlation IDs are preserved.
+
+What it should test:
+
+* when client sends `Correlation-ID`, the exact same value is returned in response header
+* response body `correlation_id` equals caller-provided value
+
+#### Test Case D: Docker Log Trace Presence
+
+Goal:
+
+* Verify the checkout trace is emitted in service container logs.
+
+What it should test:
+
+* checkout correlation ID is present in cart-service logs
+* expected request lifecycle event(s), such as `request_received`, are present
+* log shipper does not report Elasticsearch indexing 400 errors
+
+#### Test Case E: Elasticsearch Trace Completeness
+
+Goal:
+
+* Verify the request trace is indexed and searchable by `correlation_id`.
+
+What it should test:
+
+* searching Elasticsearch by checkout `correlation_id` returns indexed events
+* trace contains a minimum viable number of events (for this project: at least 20)
+* trace includes all core services (`nginx`, `cart-service`, `product-service`, `inventory-service`, `payment-service`, `order-service`)
+
+#### Test Case F: Structured Event Field Contract
+
+Goal:
+
+* Verify indexed logs follow required schema for observability.
+
+What it should test:
+
+* each indexed document includes `@timestamp`, `service_name`, and `correlation_id`
+* common events include required fields:
+
+  * `request_received` -> `method`, `path`, `correlation_id_source`
+  * `request_completed` -> `method`, `path`, `status_code`, `duration_ms`, `correlation_id_source`
+  * `outbound_http_request` -> `target_service`, `target_url`, `method`, `retry_attempt`, `max_attempts`
+  * `outbound_http_response` -> `target_service`, `status_code`, `duration_ms`, `retry_attempt`, `max_attempts`
+  * `database_query` -> `database`, `collection`, `operation`, `duration_ms`
+
+* required business event/service pairs exist:
+
+  * (`cart-service`, `checkout_started`)
+  * (`cart-service`, `checkout_completed`)
+  * (`payment-service`, `payment_authorization_completed`)
+  * (`order-service`, `order_creation_completed`)
+
+#### Test Case G: Business Event Data Quality
+
+Goal:
+
+* Verify key business events expose required safe metadata.
+
+What it should test:
+
+* `checkout_started` includes user and item context (`user_id`, `item_count`)
+* `payment_authorization_completed` includes payment result metadata (`transaction_id`, `status_text`)
+* `order_creation_completed` includes order summary metadata (`order_id`, `user_id`, `total_amount`)
+* inventory and order `database_write` events include safe DB operation metadata (`database`, `collection`, `operation`, `duration_ms`, and relevant IDs)
+
 ### 18.1 Health Tests
 
 `tests/test_health.py` should verify that all public health endpoints return HTTP 200 through Nginx.
+
+It must assert all of the following:
+
+* `/product-health`, `/cart-health`, `/inventory-health`, `/payment-health`, `/order-health` return HTTP 200
+* response body `status` equals `ok`
+* response contains `Correlation-ID` header
 
 ### 18.2 Checkout Flow Test
 
@@ -1075,6 +1187,75 @@ Include basic tests.
 * Assert response body contains `correlation_id`
 * Assert response headers contain `Correlation-ID`
 * Assert body correlation ID matches response header correlation ID
+* Assert that when client provides `Correlation-ID`, the same value is echoed in header and body
+
+### 18.3 Smoke Test Contract (Full Observability Pipeline)
+
+The smoke tests are a required acceptance contract, not optional documentation examples.
+
+Required smoke modules:
+
+* `tests/smoke/test_checkout.py`
+* `tests/smoke/test_docker_logs.py`
+* `tests/smoke/test_elasticsearch_trace.py`
+* `tests/smoke/test_event_fields.py`
+
+Smoke suite expectations:
+
+1. Start and validate full Docker Compose stack readiness.
+2. Execute one checkout request through Nginx.
+3. Capture `Correlation-ID` and verify header/body match.
+4. Wait for Elasticsearch indexing and query by `correlation_id`.
+5. Validate end-to-end observability assertions.
+
+`test_checkout.py` must verify:
+
+* checkout response body contains `status: success`
+* `order_id` is present
+* message equals `Order created successfully`
+
+`test_docker_logs.py` must verify:
+
+* checkout `correlation_id` appears in `cart-service` docker logs
+* `request_received` appears in `cart-service` docker logs
+* `filebeat` logs do not contain Elasticsearch indexing `400` errors
+
+`test_elasticsearch_trace.py` must verify:
+
+* Elasticsearch trace contains at least 20 events for the checkout `correlation_id`
+* trace includes all core services:
+
+  * `nginx`
+  * `cart-service`
+  * `product-service`
+  * `inventory-service`
+  * `payment-service`
+  * `order-service`
+
+`test_event_fields.py` must verify:
+
+* each indexed document includes `@timestamp`, `service_name`, and `correlation_id`
+* common event field contracts are satisfied for:
+
+  * `request_received`
+  * `request_completed`
+  * `outbound_http_request`
+  * `outbound_http_response`
+  * `database_query`
+
+* required service/event pairs exist in trace:
+
+  * (`cart-service`, `checkout_started`)
+  * (`cart-service`, `checkout_completed`)
+  * (`payment-service`, `payment_authorization_completed`)
+  * (`order-service`, `order_creation_completed`)
+
+* event-specific field contracts are satisfied (examples):
+
+  * `checkout_started` includes `user_id` and `item_count`
+  * `payment_authorization_completed` includes `transaction_id` and `status_text`
+  * `order_creation_completed` includes `order_id`, `user_id`, `total_amount`
+  * inventory/order `database_write` includes database metadata fields
 
 ## 19. README Requirements
 
