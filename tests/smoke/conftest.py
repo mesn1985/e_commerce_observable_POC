@@ -11,6 +11,7 @@ import pytest
 from tests.smoke._helpers import (
     BASE_URL,
     CHECKOUT_PAYLOAD,
+    CORE_SERVICES,
     REPO_ROOT,
     run_compose,
     wait_for_stack_ready,
@@ -66,7 +67,12 @@ def checkout_trace(smoke_environment: None) -> dict:
     assert correlation_id, "Response missing Correlation-ID header"
     assert body.get("correlation_id") == correlation_id, "Correlation-ID mismatch between body and header"
 
-    hits = wait_for_trace_in_elasticsearch(correlation_id)
+    hits = wait_for_trace_in_elasticsearch(
+        correlation_id,
+        timeout_seconds=180,
+        min_hits=20,
+        required_services=CORE_SERVICES,
+    )
 
     return {
         "correlation_id": correlation_id,

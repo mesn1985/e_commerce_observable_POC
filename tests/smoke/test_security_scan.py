@@ -68,7 +68,12 @@ def test_smoke_security_scan_path_enumeration(smoke_environment: None) -> None:
     assert isinstance(discovered_paths, list)
     assert discovered_paths, "Expected non-empty discovered_paths in scan report"
 
-    hits = wait_for_trace_in_elasticsearch(correlation_id, timeout_seconds=120)
+    hits = wait_for_trace_in_elasticsearch(
+        correlation_id,
+        timeout_seconds=180,
+        min_hits=1,
+        required_services={"nginx"},
+    )
     assert hits, f"No Elasticsearch hits found for correlation_id={correlation_id}"
 
     nginx_hits = [

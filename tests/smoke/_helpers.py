@@ -110,31 +110,71 @@ def wait_for_stack_ready(timeout_seconds: int = 240) -> None:
 
 
 def search_trace(correlation_id: str) -> list[dict]:
-    payload = _http_get_json(
+    request = Request(
         f"{ELASTICSEARCH_URL}/filebeat-*/_search",
-        params={
-            "q": f"correlation_id:{correlation_id}",
-            "size": 200,
-            "sort": "@timestamp:asc",
-        },
-        timeout=20.0,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+        data=json.dumps(
+            {
+                "size": 500,
+                "sort": [{"@timestamp": {"order": "asc"}}],
+                "query": {
+                    "bool": {
+                        "should": [
+                            {"term": {"correlation_id.keyword": correlation_id}},
+                            {"term": {"correlation_id": correlation_id}},
+                        ],
+                        "minimum_should_match": 1,
+                    }
+                },
+            }
+        ).encode("utf-8"),
     )
+
+    with urlopen(request, timeout=20.0) as response:
+        payload = json.loads(response.read().decode("utf-8"))
 
     return payload.get("hits", {}).get("hits", [])
 
 
-def wait_for_trace_in_elasticsearch(correlation_id: str, timeout_seconds: int = 120) -> list[dict]:
+def wait_for_trace_in_elasticsearch(
+    correlation_id: str,
+    timeout_seconds: int = 120,
+    min_hits: int = 1,
+    required_services: set[str] | None = None,
+) -> list[dict]:
     deadline = time.time() + timeout_seconds
     last_count = 0
+    best_hits: list[dict] = []
+
+    def _services_in_hits(hits: list[dict]) -> set[str]:
+        return {
+            hit.get("_source", {}).get("service_name")
+            for hit in hits
+            if hit.get("_source", {}).get("service_name")
+        }
 
     while time.time() < deadline:
-        hits = search_trace(correlation_id)
-        last_count = len(hits)
-        if hits:
-            return hits
+        try:
+            hits = search_trace(correlation_id)
+            last_count = len(hits)
+            if len(hits) > len(best_hits):
+                best_hits = hits
+
+            enough_hits = len(hits) >= min_hits
+            required_ok = True
+            if required_services:
+                required_ok = required_services.issubset(_services_in_hits(hits))
+
+            if enough_hits and required_ok:
+                return hits
+        except Exception:
+            # Elasticsearch can briefly return 503 while the cluster is warming up.
+            pass
         time.sleep(2)
 
     raise TimeoutError(
         "Timed out waiting for Elasticsearch trace indexing "
-        f"for correlation_id={correlation_id}; last hit count={last_count}"
+        f"for correlation_id={correlation_id}; "
+        f"last hit count={last_count}; best hit count={len(best_hits)}"
     )
