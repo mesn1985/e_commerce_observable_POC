@@ -347,6 +347,22 @@ For the security rationale and guardrails, see [docs/security-notes.md](docs/sec
 
 The tests are integration tests — they require the full stack to be running.
 
+Create and activate a virtual environment first:
+
+**PowerShell (Windows):**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+**Bash (Linux/macOS/WSL):**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
 ```bash
 pip install pytest httpx
 pytest tests/ -v
