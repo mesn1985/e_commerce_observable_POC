@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import importlib
+import json
 import subprocess
 import time
 from pathlib import Path
-from typing import Any
-
-import pytest
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 BASE_URL = "http://localhost:8080"
 ELASTICSEARCH_URL = "http://localhost:9200"
@@ -65,11 +64,15 @@ COMMON_EVENT_RULES = {
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def require_module(module_name: str) -> Any:
-    try:
-        return importlib.import_module(module_name)
-    except ModuleNotFoundError:
-        pytest.skip(f"Optional dependency {module_name!r} is required for smoke tests")
+def _http_get_json(url: str, *, params: dict[str, object] | None = None, timeout: float = 20.0) -> dict:
+    full_url = url
+    if params:
+        full_url = f"{url}?{urlencode(params)}"
+
+    request = Request(full_url, method="GET")
+    with urlopen(request, timeout=timeout) as response:
+        payload = response.read().decode("utf-8")
+    return json.loads(payload)
 
 
 def run_compose(args: list[str], timeout: int = 600) -> str:
@@ -91,17 +94,13 @@ def run_compose(args: list[str], timeout: int = 600) -> str:
 
 
 def wait_for_stack_ready(timeout_seconds: int = 240) -> None:
-    httpx = require_module("httpx")
     deadline = time.time() + timeout_seconds
     last_error = "stack not ready yet"
 
     while time.time() < deadline:
         try:
-            with httpx.Client(timeout=5.0) as client:
-                for path in HEALTH_PATHS:
-                    response = client.get(f"{BASE_URL}{path}")
-                    if response.status_code != 200:
-                        raise RuntimeError(f"{path} returned {response.status_code}")
+            for path in HEALTH_PATHS:
+                _http_get_json(f"{BASE_URL}{path}", timeout=5.0)
             return
         except Exception as exc:  # pragma: no cover - best effort retry loop
             last_error = str(exc)
@@ -111,18 +110,15 @@ def wait_for_stack_ready(timeout_seconds: int = 240) -> None:
 
 
 def search_trace(correlation_id: str) -> list[dict]:
-    httpx = require_module("httpx")
-    with httpx.Client(timeout=20.0) as client:
-        response = client.get(
-            f"{ELASTICSEARCH_URL}/filebeat-*/_search",
-            params={
-                "q": f"correlation_id:{correlation_id}",
-                "size": 200,
-                "sort": "@timestamp:asc",
-            },
-        )
-        response.raise_for_status()
-        payload = response.json()
+    payload = _http_get_json(
+        f"{ELASTICSEARCH_URL}/filebeat-*/_search",
+        params={
+            "q": f"correlation_id:{correlation_id}",
+            "size": 200,
+            "sort": "@timestamp:asc",
+        },
+        timeout=20.0,
+    )
 
     return payload.get("hits", {}).get("hits", [])
 

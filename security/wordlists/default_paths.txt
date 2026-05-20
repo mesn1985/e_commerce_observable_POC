@@ -1,0 +1,17 @@
+# Default API path enumeration wordlist for local lab use
+products
+products/p1001
+cart
+cart/student-1/checkout
+inventory
+inventory/p1001
+inventory/reserve
+payments
+payments/authorize
+orders
+orders/ord_123456
+product-health
+cart-health
+inventory-health
+payment-health
+order-health

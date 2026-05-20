@@ -321,6 +321,27 @@ This project enforces these rules in all service code. See [docs/security-notes.
 
 ---
 
+## Security Path Enumeration (OWASP ZAP)
+
+This repository includes an API-only path enumeration workflow for local lab use.
+
+- Scanner service: `security-scanner` (OWASP ZAP daemon)
+- ZAP API endpoint: `http://localhost:8090`
+- Target from scanner network: `http://nginx:80`
+- Wordlists: all files under `security/wordlists/`
+- Output report: `security/reports/zap_paths_<timestamp>.json`
+
+Run:
+
+```powershell
+docker compose up -d
+powershell -ExecutionPolicy Bypass -File .\scripts\security_scan.ps1
+```
+
+For the security rationale, local-only guardrails, and Kibana query guidance, see [docs/security-notes.md](docs/security-notes.md#path-enumeration-with-owasp-zap).
+
+---
+
 ## Running the Tests
 
 The tests are integration tests — they require the full stack to be running.

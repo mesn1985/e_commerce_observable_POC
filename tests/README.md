@@ -40,6 +40,7 @@ Located in `tests/smoke/`:
 - `test_docker_logs.py` - verifies Docker logs contain the trace and Filebeat shows no Elasticsearch 400 indexing errors
 - `test_elasticsearch_trace.py` - verifies the full trace is indexed and includes all expected services
 - `test_event_fields.py` - verifies expected fields exist on key indexed events
+- `test_security_scan.py` - runs OWASP ZAP path enumeration and verifies report plus Elasticsearch traceability
 
 These tests are useful when:
 - You want to validate the full observability pipeline
@@ -185,6 +186,7 @@ pytest tests/smoke/test_checkout.py -v
 pytest tests/smoke/test_docker_logs.py -v
 pytest tests/smoke/test_elasticsearch_trace.py -v
 pytest tests/smoke/test_event_fields.py -v
+pytest tests/smoke/test_security_scan.py -v
 ```
 
 ### How the smoke tests work
@@ -286,6 +288,14 @@ Validates:
   - `order_creation_completed`
 
 This is especially useful for catching regressions in structured logging format and Elasticsearch indexing.
+
+### `test_security_scan.py`
+Validates:
+- `scripts/security_scan.ps1` executes successfully
+- A new `security/reports/zap_paths_<timestamp>.json` report is created
+- The report contains valid scan metadata and non-empty discovered paths
+- The report correlation ID is indexed in Elasticsearch
+- Indexed events for that correlation ID include `nginx` entries
 
 ---
 

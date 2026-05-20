@@ -1,0 +1,30 @@
+{
+    "generated_at_utc":  "2026-05-20T20:12:17.4626226Z",
+    "target":  "http://nginx:80",
+    "correlation_id":  "sec-scan-20260520_221214",
+    "wordlist_directory":  ".\\security\\wordlists",
+    "wordlist_files":  "C:\\source\\e_commerce_observable_POC\\security\\wordlists\\default_paths.txt",
+    "wordlist_file_count":  1,
+    "attempted_path_count":  16,
+    "zap_message_count_before":  0,
+    "zap_message_count_after":  23,
+    "discovered_path_count":  16,
+    "discovered_paths":  [
+                             "/cart",
+                             "/cart/student-1/checkout",
+                             "/cart-health",
+                             "/inventory",
+                             "/inventory/p1001",
+                             "/inventory/reserve",
+                             "/inventory-health",
+                             "/order-health",
+                             "/orders",
+                             "/orders/ord_123456",
+                             "/payment-health",
+                             "/payments",
+                             "/payments/authorize",
+                             "/product-health",
+                             "/products",
+                             "/products/p1001"
+                         ]
+}

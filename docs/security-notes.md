@@ -87,3 +87,60 @@ This project is a local educational POC. It has no:
 - Secrets management
 
 None of these omissions are acceptable in a production system. They are excluded here to keep the code readable and focused on the distributed tracing learning objective.
+
+---
+
+## Path Enumeration with OWASP ZAP
+
+### Local Scope Warning
+
+This scanner workflow is for authorized local lab use only.
+
+- Target only the local Docker Compose gateway (`http://nginx:80` from containers, `http://localhost:8080` from host).
+- Do not scan public hosts, production services, or systems you do not own.
+
+### API-First Execution (PowerShell)
+
+```powershell
+docker compose up -d
+powershell -ExecutionPolicy Bypass -File .\scripts\security_scan.ps1
+```
+
+The scan script is API-only and calls the ZAP HTTP API directly.
+
+### Correlation-ID Behavior
+
+The script creates one fixed correlation ID per scan run and injects it into every scanner request via ZAP replacer rules.
+
+This lets you correlate scanner traffic in Kibana as one coherent activity stream.
+
+### Wordlist Consumption Rule
+
+Enumeration consumes all files under `./security/wordlists`.
+
+- Empty lines and comment lines beginning with `#` are ignored.
+- Paths from all files are merged and de-duplicated before requests are sent.
+
+### API-Only Constraint
+
+Spider/crawling discovery is intentionally excluded because this target is API-only.
+
+### Kibana Query Examples
+
+Find scanner traffic by fixed correlation ID:
+
+```text
+service_name:"nginx" AND correlation_id:"sec-scan-20260520_120000"
+```
+
+Find likely discovery requests in Nginx logs:
+
+```text
+service_name:"nginx" AND request_method:"GET" AND request_uri:/products|cart|inventory|payments|orders/
+```
+
+### Teaching Context
+
+This project intentionally exposes broad service routes through Nginx to make attack-surface discovery visible for students.
+
+In production, route exposure should be minimized and access controlled.

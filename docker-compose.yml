@@ -130,6 +130,24 @@ services:
       - payment-service
       - order-service
 
+  security-scanner:
+    image: zaproxy/zap-stable:latest
+    container_name: security-scanner
+    depends_on:
+      - nginx
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./security:/security:rw
+      - ./security/wordlists:/wordlists:ro
+    command: >
+      zap.sh -daemon
+      -host 0.0.0.0
+      -port 8090
+      -config api.disablekey=true
+      -config api.addrs.addr.name=.*
+      -config api.addrs.addr.regex=true
+
 volumes:
   mongo_data:
   es_data:

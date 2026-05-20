@@ -1413,7 +1413,7 @@ Add a dedicated ZAP service to `docker-compose.yml` as part of the normal stack 
 
 ```yaml
 security-scanner:
-  image: ghcr.io/zaproxy/zaproxy:stable
+  image: zaproxy/zap-stable:latest
   container_name: security-scanner
   depends_on:
     - nginx
@@ -1449,14 +1449,15 @@ Important guidance:
 
 Required API workflow:
 
-1. Fail fast if `./security/wordlists` does not exist or is empty.
+1. Fail fast if `./security/wordlists` does not exist or contains no files.
 2. Use target base URL `http://nginx:80`.
 3. Generate a fixed scan Correlation-ID for the run (for example: `sec-scan-<timestamp>`).
 4. Configure ZAP through API to add/override request header `Correlation-ID` with that fixed value.
-5. Trigger enumeration requests by calling `core/action/accessUrl` for each generated candidate path.
-6. Poll `core/view/numberOfMessages` until expected request volume is observed or timeout is reached.
-7. Save one JSON report to `security/reports/`.
-8. Output the report path and Correlation-ID used.
+5. Load and merge candidate paths from all files in `./security/wordlists`.
+6. Trigger enumeration requests by calling `core/action/accessUrl` for each merged candidate path.
+7. Poll `core/view/numberOfMessages` until expected request volume is observed or timeout is reached.
+8. Save one JSON report to `security/reports/`.
+9. Output the report path and Correlation-ID used.
 
 ### 26.4 Example API Calls (PowerShell)
 
@@ -1465,22 +1466,29 @@ docker compose up -d
 
 $zap = "http://localhost:8090"
 $target = "http://nginx:80"
-$wordlistPath = ".\security\wordlists\paths.txt"
+$wordlistDir = ".\security\wordlists"
 $reportDir = ".\security\reports"
 $cid = "sec-scan-$(Get-Date -Format yyyyMMdd_HHmmss)"
 $ts = Get-Date -Format yyyyMMdd_HHmmss
 $reportPath = Join-Path $reportDir "zap_paths_$ts.json"
 
-if (!(Test-Path $wordlistPath)) { throw "Wordlist not found: $wordlistPath" }
+if (!(Test-Path $wordlistDir)) { throw "Wordlist directory not found: $wordlistDir" }
 if (!(Test-Path $reportDir)) { New-Item -ItemType Directory -Path $reportDir | Out-Null }
 
-$paths = Get-Content $wordlistPath |
+$wordlistFiles = Get-ChildItem -Path $wordlistDir -File
+if ($wordlistFiles.Count -eq 0) { throw "No wordlist files found in: $wordlistDir" }
+
+$allLines = foreach ($file in $wordlistFiles) {
+  Get-Content $file.FullName
+}
+
+$paths = $allLines |
   Where-Object { $_ -and -not $_.StartsWith("#") } |
   ForEach-Object { $_.Trim().TrimStart('/') } |
   Where-Object { $_ -ne "" } |
   Select-Object -Unique
 
-if ($paths.Count -eq 0) { throw "Wordlist is empty after filtering comments/blanks." }
+if ($paths.Count -eq 0) { throw "No valid paths found after filtering all wordlist files." }
 
 # 1) Add a replacer rule so all scanner requests carry one fixed Correlation-ID
 Invoke-RestMethod -Method Get -Uri "$zap/JSON/replacer/action/addRule/?description=scan-cid&enabled=true&matchType=REQ_HEADER&matchRegex=false&matchString=Correlation-ID&replacement=$cid"
@@ -1521,7 +1529,9 @@ $report = [ordered]@{
   generated_at_utc = (Get-Date).ToUniversalTime().ToString("o")
   target = $target
   correlation_id = $cid
-  wordlist = $wordlistPath
+  wordlist_directory = $wordlistDir
+  wordlist_files = $wordlistFiles.FullName
+  wordlist_file_count = $wordlistFiles.Count
   attempted_path_count = $paths.Count
   zap_message_count_before = $before
   zap_message_count_after = $current
@@ -1572,6 +1582,7 @@ It must include:
 * Local-only scope warning (authorized lab use only)
 * API-first run steps (PowerShell examples are allowed)
 * Explanation that a fixed `Correlation-ID` is injected for the scan
+* Statement that all files under `./security/wordlists` are consumed during enumeration
 * Explicit statement that spider/crawling is excluded because the target is API-only
 * One example Kibana query for scan traffic by correlation ID
 * One example Kibana query for Nginx discovery requests
@@ -1597,7 +1608,7 @@ Numbered checklist:
 
 1. Docker Compose contains a working `security-scanner` ZAP service
 2. Path enumeration is executable through direct ZAP API calls (wrapper script optional)
-3. Workflow reads wordlists from `./security/wordlists`
+3. Workflow consumes all wordlist files from `./security/wordlists`
 4. Workflow forces one fixed `Correlation-ID` across scan requests
 5. Workflow outputs one JSON report in `security/reports/`
 6. Report shows non-empty path discovery results
