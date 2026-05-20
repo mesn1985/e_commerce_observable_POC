@@ -1393,3 +1393,219 @@ Implement the project incrementally and keep the code simple, readable, and suit
 * Make the README accurate and student-friendly.
 * Make the system work locally before adding optional refinements.
 * Avoid advanced production security configuration unless documented as out of scope.
+
+## 26. Security Testing: Path Enumeration (OWASP ZAP)
+
+### 26.1 Purpose
+
+Add path enumeration testing with OWASP ZAP to demonstrate:
+
+* Realistic attacker-style endpoint discovery against the Nginx gateway
+* Defensive monitoring in Kibana using structured Nginx logs
+* How scan traffic can be correlated with a fixed `Correlation-ID`
+* Why broad route exposure is useful for teaching but risky in production
+
+This is a lightweight lab: one API-first workflow, one scanner stack service, and one JSON report output.
+
+### 26.2 Scanner Service in Docker Compose
+
+Add a dedicated ZAP service to `docker-compose.yml` as part of the normal stack (no extra profile required).
+
+```yaml
+security-scanner:
+  image: ghcr.io/zaproxy/zaproxy:stable
+  container_name: security-scanner
+  depends_on:
+    - nginx
+  ports:
+    - "8090:8090"
+  volumes:
+    - ./security:/security:rw
+    - ./security/wordlists:/wordlists:ro
+  command: >
+    zap.sh -daemon
+    -host 0.0.0.0
+    -port 8090
+    -config api.disablekey=true
+    -config api.addrs.addr.name=.*
+    -config api.addrs.addr.regex=true
+```
+
+Required behavior:
+
+* Scanner must target Nginx on the Docker network using `http://nginx:80`
+* Wordlists must come from host-mounted `./security/wordlists`
+* Scanner must never target external/public hosts
+* Scanner usage remains local-lab-only and educational
+
+### 26.3 Path Enumeration Workflow (API-First)
+
+Use direct OWASP ZAP API calls as the primary method. A wrapper script is optional, not required.
+
+Important guidance:
+
+* This project is API-only, so path enumeration must be driven by wordlists and explicit API requests.
+* Spider/crawling methods are out of scope for this section.
+
+Required API workflow:
+
+1. Fail fast if `./security/wordlists` does not exist or is empty.
+2. Use target base URL `http://nginx:80`.
+3. Generate a fixed scan Correlation-ID for the run (for example: `sec-scan-<timestamp>`).
+4. Configure ZAP through API to add/override request header `Correlation-ID` with that fixed value.
+5. Trigger enumeration requests by calling `core/action/accessUrl` for each generated candidate path.
+6. Poll `core/view/numberOfMessages` until expected request volume is observed or timeout is reached.
+7. Save one JSON report to `security/reports/`.
+8. Output the report path and Correlation-ID used.
+
+### 26.4 Example API Calls (PowerShell)
+
+```powershell
+docker compose up -d
+
+$zap = "http://localhost:8090"
+$target = "http://nginx:80"
+$wordlistPath = ".\security\wordlists\paths.txt"
+$reportDir = ".\security\reports"
+$cid = "sec-scan-$(Get-Date -Format yyyyMMdd_HHmmss)"
+$ts = Get-Date -Format yyyyMMdd_HHmmss
+$reportPath = Join-Path $reportDir "zap_paths_$ts.json"
+
+if (!(Test-Path $wordlistPath)) { throw "Wordlist not found: $wordlistPath" }
+if (!(Test-Path $reportDir)) { New-Item -ItemType Directory -Path $reportDir | Out-Null }
+
+$paths = Get-Content $wordlistPath |
+  Where-Object { $_ -and -not $_.StartsWith("#") } |
+  ForEach-Object { $_.Trim().TrimStart('/') } |
+  Where-Object { $_ -ne "" } |
+  Select-Object -Unique
+
+if ($paths.Count -eq 0) { throw "Wordlist is empty after filtering comments/blanks." }
+
+# 1) Add a replacer rule so all scanner requests carry one fixed Correlation-ID
+Invoke-RestMethod -Method Get -Uri "$zap/JSON/replacer/action/addRule/?description=scan-cid&enabled=true&matchType=REQ_HEADER&matchRegex=false&matchString=Correlation-ID&replacement=$cid"
+
+# 2) Capture baseline message count before enumeration
+$before = [int](Invoke-RestMethod -Method Get -Uri "$zap/JSON/core/view/numberOfMessages/").numberOfMessages
+
+# 3) Trigger API-only path enumeration via core/action/accessUrl
+foreach ($p in $paths) {
+  $url = "$target/$p"
+  $encodedUrl = [System.Uri]::EscapeDataString($url)
+  Invoke-RestMethod -Method Get -Uri "$zap/JSON/core/action/accessUrl/?url=$encodedUrl&followRedirects=true" | Out-Null
+}
+
+# 4) Poll until expected message count increment is observed (or timeout)
+$expected = $before + $paths.Count
+$deadline = (Get-Date).AddSeconds(60)
+do {
+  Start-Sleep -Milliseconds 500
+  $current = [int](Invoke-RestMethod -Method Get -Uri "$zap/JSON/core/view/numberOfMessages/").numberOfMessages
+} while ($current -lt $expected -and (Get-Date) -lt $deadline)
+
+# 5) Collect discovered URLs from ZAP and keep target-only paths
+$seenUrls = (Invoke-RestMethod -Method Get -Uri "$zap/JSON/core/view/urls/").urls |
+  Where-Object { $_ -like "$target/*" } |
+  Select-Object -Unique
+
+$discoveredPaths = $seenUrls | ForEach-Object {
+  try {
+    ([Uri]$_).AbsolutePath
+  } catch {
+    $null
+  }
+} | Where-Object { $_ } | Select-Object -Unique
+
+# 6) Export JSON report
+$report = [ordered]@{
+  generated_at_utc = (Get-Date).ToUniversalTime().ToString("o")
+  target = $target
+  correlation_id = $cid
+  wordlist = $wordlistPath
+  attempted_path_count = $paths.Count
+  zap_message_count_before = $before
+  zap_message_count_after = $current
+  discovered_path_count = $discoveredPaths.Count
+  discovered_paths = $discoveredPaths
+}
+
+$report | ConvertTo-Json -Depth 5 | Set-Content -Path $reportPath -Encoding UTF8
+Write-Host "Report: $reportPath"
+Write-Host "Correlation-ID: $cid"
+```
+
+### 26.5 Expected Discoveries
+
+The scan is expected to return non-empty path findings and typically includes routes such as:
+
+* `/products`
+* `/cart`
+* `/inventory`
+* `/payments`
+* `/orders`
+
+Success condition is intentionally broad for classroom variability:
+
+* Non-empty discovery output in JSON report
+* Matching scanner traffic visible in Kibana logs
+
+### 26.6 Project Structure Additions
+
+```text
+security/
+  reports/
+    zap_paths_<timestamp>.json
+  wordlists/
+    <one-or-more-host-provided-wordlist-files>
+scripts/
+  security_scan.ps1
+```
+
+### 26.7 Documentation Requirements
+
+Add a section to `docs/security-notes.md` named:
+
+`Path Enumeration with OWASP ZAP`
+
+It must include:
+
+* Local-only scope warning (authorized lab use only)
+* API-first run steps (PowerShell examples are allowed)
+* Explanation that a fixed `Correlation-ID` is injected for the scan
+* Explicit statement that spider/crawling is excluded because the target is API-only
+* One example Kibana query for scan traffic by correlation ID
+* One example Kibana query for Nginx discovery requests
+* Brief explanation of why this route exposure exists in a teaching POC
+
+Also add a short reference in `README.md` linking to the security notes section.
+
+### 26.8 Non-Goals
+
+This section explicitly excludes:
+
+* Authentication/authorization hardening
+* WAF or rate-limiting implementation
+* Automated remediation of discovered routes
+* Internet-facing penetration testing
+* Credential brute force or non-path fuzzing
+* General vulnerability scanning beyond path enumeration requests
+* Spider/crawling-based discovery
+
+### 26.9 Acceptance Criteria
+
+Numbered checklist:
+
+1. Docker Compose contains a working `security-scanner` ZAP service
+2. Path enumeration is executable through direct ZAP API calls (wrapper script optional)
+3. Workflow reads wordlists from `./security/wordlists`
+4. Workflow forces one fixed `Correlation-ID` across scan requests
+5. Workflow outputs one JSON report in `security/reports/`
+6. Report shows non-empty path discovery results
+7. Kibana can show Nginx scanner traffic for that `Correlation-ID`
+8. `docs/security-notes.md` documents execution and observability analysis
+
+Given/When/Then acceptance statements:
+
+1. Given the stack is running, when ZAP API path-enumeration calls are executed, then a JSON report is created.
+2. Given a fixed scan `Correlation-ID`, when Kibana is queried for Nginx logs, then scan requests are visible and attributable.
+3. Given this is an educational POC, when findings are reviewed, then route exposure is treated as intentional teaching design, not a remediation task in this section.
