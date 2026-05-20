@@ -17,6 +17,7 @@ If you are returning to this repository later, start with these docs:
 - [docs/architecture.md](docs/architecture.md) - Detailed architecture, flow, and shared module responsibilities
 - [docs/kibana-search-guide.md](docs/kibana-search-guide.md) - Step-by-step Kibana workflow to reconstruct a trace
 - [docs/security-notes.md](docs/security-notes.md) - Security rationale, logging boundaries, and production caveats
+- [docs/path-enumeration.md](docs/path-enumeration.md) - API-only OWASP ZAP path enumeration runbook and validation steps
 - [docs/troubleshooting.md](docs/troubleshooting.md) - Docker and Elasticsearch troubleshooting commands used in practice
 - [docs/implementation.md](docs/implementation.md) - Internal implementation details for middleware, logging, and Filebeat config
 - [tests/README.md](tests/README.md) - Test strategy, smoke suite behavior, and exact test commands
@@ -338,7 +339,7 @@ docker compose up -d
 powershell -ExecutionPolicy Bypass -File .\scripts\security_scan.ps1
 ```
 
-For the security rationale, local-only guardrails, and Kibana query guidance, see [docs/security-notes.md](docs/security-notes.md#path-enumeration-with-owasp-zap).
+For the security rationale and guardrails, see [docs/security-notes.md](docs/security-notes.md#path-enumeration-with-owasp-zap). For step-by-step execution and validation, see [docs/path-enumeration.md](docs/path-enumeration.md).
 
 ---
 
@@ -354,12 +355,12 @@ pytest tests/ -v
 Smoke test suite (self-managed environment):
 
 ```bash
-pip install pytest httpx testcontainers
+pip install pytest
 pytest tests/smoke -v
 ```
 
 The smoke suite will:
-- Start the full stack via Testcontainers using `docker-compose.yml`
+- Start the full stack directly via `docker compose up --build -d`
 - Execute one checkout request
 - Validate docker logs and Filebeat health signals
 - Query Elasticsearch directly for the trace

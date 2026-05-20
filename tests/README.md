@@ -12,7 +12,7 @@ The project currently contains two test layers:
 They serve different purposes:
 
 - Integration tests assume the environment is already running and verify the application behavior through HTTP requests.
-- Smoke tests manage the full Docker Compose environment through Testcontainers, run a real checkout, inspect logs, query Elasticsearch, and validate indexed fields.
+- Smoke tests manage the full Docker Compose environment directly via `docker compose`, run a real checkout, inspect logs, query Elasticsearch, and validate indexed fields.
 
 ---
 
@@ -66,7 +66,6 @@ You need:
 - Docker Desktop or Docker Engine running
 - Python available locally
 - Test dependencies installed
-- Testcontainers installed
 
 Smoke tests start the full environment using the repository's `docker-compose.yml`.
 
@@ -109,13 +108,13 @@ python -m venv venv
 With the virtual environment activated (from the repository root), install the test dependencies:
 
 ```bash
-pip install pytest httpx testcontainers
+pip install pytest
 ```
 
-If you only want to run the basic integration tests, `pytest` and `httpx` are sufficient:
+If you only want to run the basic integration tests, `pytest` is sufficient:
 
 ```bash
-pip install pytest httpx
+pip install pytest
 ```
 
 ### Deactivate Virtual Environment
@@ -194,7 +193,7 @@ pytest tests/smoke/test_security_scan.py -v
 The smoke suite performs the following flow:
 
 1. Stop and clean any previous Compose environment with `docker compose down -v`
-2. Start the full stack through Testcontainers using `docker-compose.yml`
+2. Start the full stack directly via `docker compose up --build -d`
 3. Wait until all health endpoints respond successfully
 4. Send one real checkout request through Nginx
 5. Capture the returned `Correlation-ID`
@@ -232,8 +231,9 @@ This command removes all containers, networks, and volumes created by the smoke 
 
 ### Keeping the environment running for manual inspection
 
-The environment is already suitable for manual post-run inspection with the current fixture behavior.
-The `SMOKE_KEEP_ENV` variable is not required by the current test code.
+Set `SMOKE_KEEP_ENV=1` to keep the stack running after smoke tests.
+
+If `SMOKE_KEEP_ENV` is unset, the smoke fixture tears the stack down automatically.
 
 Then manually clean up when you're done:
 
@@ -340,11 +340,11 @@ curl -s "http://localhost:9200/filebeat-*/_search?size=20&sort=@timestamp:desc"
 ### Smoke tests skip immediately
 
 Likely cause:
-- Missing optional dependency such as `httpx` or `testcontainers`
+- Python or pytest is not installed
 
 Fix:
 ```bash
-pip install pytest httpx testcontainers
+pip install pytest
 ```
 
 ### Smoke tests time out waiting for health checks
