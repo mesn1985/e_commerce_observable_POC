@@ -16,6 +16,7 @@ The scanner workflow is API-only. Spider or crawl-based discovery is intentional
 
 - security-scanner service in docker-compose.yml
 - ZAP daemon API exposed on host at http://localhost:8090
+- Postman request for API check: Security Scanner -> ZAP API Version in postman/ecommerce-distributed-tracing-poc.postman_collection.json
 - PowerShell scan script (manual Windows use): scripts/security_scan.ps1
 - Python scan script (cross-platform and CI): scripts/security_scan.py
 - Wordlist folder: security/wordlists
@@ -53,6 +54,10 @@ python scripts/security_scan.py
 
 - Report path, for example: security/reports/zap_paths_YYYYMMDD_HHMMSS.json
 - Correlation-ID, for example: sec-scan-YYYYMMDD_HHMMSS
+
+Optional quick check before running the script:
+
+- Run the Postman request Security Scanner -> ZAP API Version and confirm HTTP 200 with a version field in the JSON response.
 
 ## What the Script Does
 

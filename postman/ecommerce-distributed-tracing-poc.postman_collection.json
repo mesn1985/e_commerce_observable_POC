@@ -15,6 +15,10 @@
       "value": "http://localhost:9200"
     },
     {
+      "key": "zapApiBase",
+      "value": "http://localhost:8090"
+    },
+    {
       "key": "lastCorrelationId",
       "value": ""
     }
@@ -229,6 +233,51 @@
               ]
             },
             "description": "Searches Filebeat indices directly in Elasticsearch using the Correlation-ID saved by the demo checkout request."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Security Scanner",
+      "item": [
+        {
+          "name": "ZAP API Version",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ZAP API is reachable', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Version field exists', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('version');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{zapApiBase}}/JSON/core/view/version/",
+              "host": [
+                "{{zapApiBase}}"
+              ],
+              "path": [
+                "JSON",
+                "core",
+                "view",
+                "version",
+                ""
+              ]
+            },
+            "description": "Checks that the OWASP ZAP daemon API is reachable on the configured host and port."
           },
           "response": []
         }

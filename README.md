@@ -328,6 +328,7 @@ This repository includes an API-only path enumeration workflow for local lab use
 
 - Scanner service: `security-scanner` (OWASP ZAP daemon)
 - ZAP API endpoint: `http://localhost:8090`
+- Postman collection includes `Security Scanner -> ZAP API Version` for quick API reachability checks
 - Target from scanner network: `http://nginx:80`
 - Wordlists: all files under `security/wordlists/`
 - Output report: `security/reports/zap_paths_<timestamp>.json`
@@ -347,6 +348,8 @@ python scripts/security_scan.py
 ```
 
 For the security rationale and guardrails, see [docs/security-notes.md](docs/security-notes.md#path-enumeration-with-owasp-zap). For step-by-step execution and validation, see [docs/path-enumeration.md](docs/path-enumeration.md).
+
+You can also verify scanner readiness from Postman using the request `Security Scanner -> ZAP API Version` in `postman/ecommerce-distributed-tracing-poc.postman_collection.json`.
 
 ---
 
