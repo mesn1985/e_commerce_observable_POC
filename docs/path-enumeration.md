@@ -16,7 +16,8 @@ The scanner workflow is API-only. Spider or crawl-based discovery is intentional
 
 - security-scanner service in docker-compose.yml
 - ZAP daemon API exposed on host at http://localhost:8090
-- PowerShell scan script: scripts/security_scan.ps1
+- PowerShell scan script (manual Windows use): scripts/security_scan.ps1
+- Python scan script (cross-platform and CI): scripts/security_scan.py
 - Wordlist folder: security/wordlists
 - Report output folder: security/reports
 
@@ -40,6 +41,12 @@ docker compose up -d
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\security_scan.ps1
+```
+
+Cross-platform alternative:
+
+```bash
+python scripts/security_scan.py
 ```
 
 3. Confirm script output includes:
@@ -105,6 +112,7 @@ service_name:"nginx" AND correlation_id:"sec-scan-YYYYMMDD_HHMMSS"
 
 - docker-compose.yml
 - scripts/security_scan.ps1
+- scripts/security_scan.py
 - security/wordlists/default_paths.txt
 - docs/security-notes.md
 - tests/smoke/test_security_scan.py

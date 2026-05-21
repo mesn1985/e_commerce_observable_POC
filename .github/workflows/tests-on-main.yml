@@ -1,0 +1,48 @@
+name: Tests on main push
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      - name: Show Docker and Compose versions
+        run: |
+          docker --version
+          docker compose version
+
+      - name: Start stack for integration tests
+        run: docker compose up -d --build
+
+      - name: Run integration tests
+        run: pytest tests/test_health.py tests/test_checkout_flow.py -v
+
+      - name: Stop integration test stack
+        if: always()
+        run: docker compose down -v --remove-orphans
+
+      - name: Run smoke tests
+        run: pytest tests/smoke -v
+
+      - name: Final cleanup
+        if: always()
+        run: docker compose down -v --remove-orphans

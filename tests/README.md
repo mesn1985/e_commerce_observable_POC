@@ -291,7 +291,7 @@ This is especially useful for catching regressions in structured logging format 
 
 ### `test_security_scan.py`
 Validates:
-- `scripts/security_scan.ps1` executes successfully
+- `scripts/security_scan.py` executes successfully (cross-platform)
 - A new `security/reports/zap_paths_<timestamp>.json` report is created
 - The report contains valid scan metadata and non-empty discovered paths
 - The report correlation ID is indexed in Elasticsearch
