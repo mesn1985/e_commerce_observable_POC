@@ -1620,3 +1620,60 @@ Given/When/Then acceptance statements:
 1. Given the stack is running, when ZAP API path-enumeration calls are executed, then a JSON report is created.
 2. Given a fixed scan `Correlation-ID`, when Kibana is queried for Nginx logs, then scan requests are visible and attributable.
 3. Given this is an educational POC, when findings are reviewed, then route exposure is treated as intentional teaching design, not a remediation task in this section.
+
+## 27. CI Pipeline: GitHub Actions Test Suite
+
+### 27.1 Purpose
+
+Define a baseline CI pipeline that validates the integration behavior of the lab stack on every push to `main` and on manual dispatch.
+
+### 27.2 Workflow File
+
+The repository must include:
+
+* `.github/workflows/tests-on-main.yml`
+
+The workflow must define one job named `test-suite` on `ubuntu-latest`.
+
+### 27.3 Trigger Rules
+
+Required triggers:
+
+* `push` to `main`
+* `workflow_dispatch`
+
+### 27.4 Required Pipeline Steps
+
+The `test-suite` job must run these steps in order:
+
+1. Checkout repository.
+2. Set up Python `3.12`.
+3. Install test dependencies, including `pytest` and `httpx`.
+4. Show Docker and Docker Compose versions.
+5. Start the stack using `docker compose up -d --build`.
+6. Run integration tests with `pytest tests/test_health.py tests/test_checkout_flow.py -v`.
+7. Always stop and clean containers with `docker compose down -v --remove-orphans`.
+8. Run smoke tests with `pytest tests/smoke -v`.
+9. Always perform final cleanup with `docker compose down -v --remove-orphans`.
+
+The job timeout should be `60` minutes.
+
+### 27.5 Action Runtime Compatibility
+
+Use current action major versions that are compatible with the JavaScript runtime migration on GitHub-hosted runners.
+
+Minimum required versions:
+
+* `actions/checkout@v5`
+* `actions/setup-python@v6`
+
+This avoids deprecation exposure from older action versions tied to Node.js 20 behavior.
+
+### 27.6 Acceptance Criteria
+
+1. Workflow exists at `.github/workflows/tests-on-main.yml` and is triggered by `push` to `main` and `workflow_dispatch`.
+2. Job name is `test-suite` and uses `ubuntu-latest`.
+3. Pipeline installs both `pytest` and `httpx` before running tests.
+4. Integration tests and smoke tests both execute in CI.
+5. Cleanup runs even when prior test steps fail.
+6. Workflow uses `actions/checkout@v5` and `actions/setup-python@v6`.

@@ -60,12 +60,58 @@ No service in this project logs request bodies. The payment service logs `amount
 
 In this project, Nginx routes all five backend services publicly:
 
-```
+```text
 /products/*    -> product-service
 /cart/*        -> cart-service
 /inventory/*   -> inventory-service
 /payments/*    -> payment-service
 /orders/*      -> order-service
+```
+
+```mermaid
+flowchart LR
+    Client[External client or tester]
+    Scanner[OWASP ZAP scanner]
+
+    subgraph Public[Publicly reachable in this teaching POC]
+        Nginx[Nginx gateway]
+        Product[product-service]
+        Cart[cart-service]
+        Inventory[inventory-service]
+        Payment[payment-service]
+        Order[order-service]
+    end
+
+    subgraph Data[Internal data stores]
+        Mongo[(MongoDB)]
+    end
+
+    subgraph Observability[Observability plane]
+        Filebeat[Filebeat]
+        Elastic[Elasticsearch]
+        Kibana[Kibana]
+    end
+
+    Client -->|HTTP requests + optional Correlation-ID| Nginx
+    Scanner -->|path enumeration traffic| Nginx
+    Nginx --> Product
+    Nginx --> Cart
+    Nginx --> Inventory
+    Nginx --> Payment
+    Nginx --> Order
+
+    Product --> Mongo
+    Inventory --> Mongo
+    Order --> Mongo
+
+    Nginx -->|JSON access logs| Filebeat
+    Product -->|JSON app logs| Filebeat
+    Cart -->|JSON app logs| Filebeat
+    Inventory -->|JSON app logs| Filebeat
+    Payment -->|JSON app logs| Filebeat
+    Order -->|JSON app logs| Filebeat
+    Filebeat --> Elastic
+    Kibana --> Elastic
 ```
 
 This is done **intentionally for teaching purposes** so that students can call any service directly and observe individual service behaviour.

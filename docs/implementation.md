@@ -21,7 +21,7 @@ All services use structured JSON logging. Every log entry is a single JSON objec
 
 ### Log Flow
 
-```
+```text
 Service (logger.info()) 
   ↓
 JSONFormatter (shared/logging_config.py) 
@@ -35,6 +35,37 @@ Container log file (/var/lib/docker/containers/*/*)
 Filebeat (filestream input + docker parser)
   ↓
 Elasticsearch
+```
+
+### Observability Pipeline Diagram
+
+```mermaid
+flowchart LR
+    subgraph App[Application Runtime]
+        Handler[FastAPI handler or middleware]
+        Formatter[shared/logging_config.py\nJSONFormatter]
+        Stdout[stdout/stderr]
+        Handler -->|logger.info extra fields| Formatter
+        Formatter -->|single JSON log line| Stdout
+    end
+
+    subgraph Docker[Container Logging]
+        Driver[Docker log capture]
+        File[(Container log file\n/var/lib/docker/containers/*/*)]
+        Stdout --> Driver
+        Driver --> File
+    end
+
+    subgraph Shipping[Log Shipping and Search]
+        Filebeat[Filebeat\nfilestream + docker parser]
+        Remap[Field normalization\nevent -> event_name\nservice -> service_name\nstatus -> status_text]
+        Elasticsearch[Elasticsearch]
+        Kibana[Kibana Discover]
+        File --> Filebeat
+        Filebeat --> Remap
+        Remap --> Elasticsearch
+        Kibana -->|search by correlation_id| Elasticsearch
+    end
 ```
 
 ---
