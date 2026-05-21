@@ -339,6 +339,13 @@ docker compose up -d
 powershell -ExecutionPolicy Bypass -File .\scripts\security_scan.ps1
 ```
 
+Cross-platform alternative (used by CI smoke tests):
+
+```bash
+docker compose up -d
+python scripts/security_scan.py
+```
+
 For the security rationale and guardrails, see [docs/security-notes.md](docs/security-notes.md#path-enumeration-with-owasp-zap). For step-by-step execution and validation, see [docs/path-enumeration.md](docs/path-enumeration.md).
 
 ---

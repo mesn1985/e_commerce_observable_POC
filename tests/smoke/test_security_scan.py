@@ -1,30 +1,16 @@
 from __future__ import annotations
 
 import json
-import os
-import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
-
-import pytest
 
 from tests.smoke._helpers import REPO_ROOT, wait_for_trace_in_elasticsearch
 
 
-def _find_powershell() -> str | None:
-    return shutil.which("powershell") or shutil.which("pwsh")
-
-
 def test_smoke_security_scan_path_enumeration(smoke_environment: None) -> None:
-    if os.name != "nt":
-        pytest.skip("Security scan smoke test is Windows-only")
-
-    powershell = _find_powershell()
-    if not powershell:
-        pytest.skip("PowerShell executable not found")
-
-    script_path = REPO_ROOT / "scripts" / "security_scan.ps1"
+    script_path = REPO_ROOT / "scripts" / "security_scan.py"
     report_dir = REPO_ROOT / "security" / "reports"
 
     assert script_path.exists(), f"Missing scan script: {script_path}"
@@ -33,7 +19,7 @@ def test_smoke_security_scan_path_enumeration(smoke_environment: None) -> None:
     before_reports = {p.name for p in report_dir.glob("zap_paths_*.json")}
     start_ts = time.time()
 
-    command = [powershell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script_path)]
+    command = [sys.executable, str(script_path)]
     result = subprocess.run(
         command,
         cwd=REPO_ROOT,
@@ -43,13 +29,13 @@ def test_smoke_security_scan_path_enumeration(smoke_environment: None) -> None:
     )
 
     assert result.returncode == 0, (
-        "security_scan.ps1 failed\n"
+        "security_scan.py failed\n"
         f"STDOUT:\n{result.stdout}\n"
         f"STDERR:\n{result.stderr}"
     )
 
     new_reports = [p for p in report_dir.glob("zap_paths_*.json") if p.name not in before_reports]
-    assert new_reports, "Expected security_scan.ps1 to generate a new zap_paths_*.json report"
+    assert new_reports, "Expected security_scan.py to generate a new zap_paths_*.json report"
 
     report_path = max(new_reports, key=lambda p: p.stat().st_mtime)
     assert report_path.stat().st_mtime >= start_ts - 1
